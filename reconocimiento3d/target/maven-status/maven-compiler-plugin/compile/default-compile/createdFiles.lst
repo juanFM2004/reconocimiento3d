@@ -1,6 +1,8 @@
+com\reconocimiento3d\vision\DetectorEnVivo.class
 com\reconocimiento3d\Interfaz\VentanaPrincipal.class
 com\reconocimiento3d\App.class
 com\reconocimiento3d\vision\VisorCamara.class
 com\reconocimiento3d\vision\DetectorObjetos.class
 com\reconocimiento3d\vision\Camara.class
+com\reconocimiento3d\vision\DetectorEnVivo$Deteccion.class
 com\reconocimiento3d\modelos\GestorModelos.class
