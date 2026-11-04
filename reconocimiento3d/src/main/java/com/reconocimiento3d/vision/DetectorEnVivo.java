@@ -2,6 +2,9 @@ package com.reconocimiento3d.vision;
 
 import java.awt.Desktop;
 import java.net.URI;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 import ai.onnxruntime.*;
 import nu.pattern.OpenCV;
 import org.opencv.core.*;
@@ -71,13 +74,17 @@ public class DetectorEnVivo {
 
         int clase;
 
-        Deteccion(Rect caja, float confianza, int clase) {
+        String nombreClase;
+
+        Deteccion(Rect caja, float confianza, int clase, String nombreClase) {
 
             this.caja = caja;
 
             this.confianza = confianza;
 
             this.clase = clase;
+
+            this.nombreClase = nombreClase;
 
         }
 
@@ -89,8 +96,44 @@ public class DetectorEnVivo {
         OpenCV.loadLocally();
         System.out.println("OpenCV cargado correctamente");
 
+        // Flag compartido entre el hilo principal y el servidor de cierre
+        AtomicBoolean visorAbierto = new AtomicBoolean(false);
+
+        // Servidor HTTP ligero en puerto 8001: el visor3d.html avisa cuando se cierra
+        Thread servidorCierre = new Thread(() -> {
+            try (ServerSocket servidor = new ServerSocket(8001)) {
+                System.out.println("Servidor de cierre escuchando en puerto 8001");
+                while (!Thread.currentThread().isInterrupted()) {
+                    try (Socket cliente = servidor.accept()) {
+                        byte[] buffer = new byte[2048];
+                        int leidos = cliente.getInputStream().read(buffer);
+                        if (leidos > 0) {
+                            String solicitud = new String(buffer, 0, leidos);
+                            // Responder con CORS para evitar bloqueos del navegador
+                            String respuesta =
+                                "HTTP/1.1 200 OK\r\n" +
+                                "Access-Control-Allow-Origin: *\r\n" +
+                                "Access-Control-Allow-Methods: POST, OPTIONS\r\n" +
+                                "Content-Length: 0\r\n\r\n";
+                            cliente.getOutputStream().write(respuesta.getBytes());
+                            cliente.getOutputStream().flush();
+                            if (solicitud.startsWith("POST /cerrar")) {
+                                visorAbierto.set(false);
+                                System.out.println("Visor 3D cerrado: listo para nueva detección");
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            } catch (Exception e) {
+                System.out.println("Error en servidor de cierre: " + e.getMessage());
+            }
+        });
+        servidorCierre.setDaemon(true);
+        servidorCierre.start();
+
         VideoCapture camara = null;
         OrtSession sesion = null;
+        OrtSession sesionLentes = null;
         OrtEnvironment entorno = null;
 
         Mat imagen = new Mat();
@@ -98,19 +141,22 @@ public class DetectorEnVivo {
         Mat rgb = new Mat();
 
         try {
-            // 2. Cargar modelo YOLO
-
+            // 2. Cargar modelos YOLO
             entorno = OrtEnvironment.getEnvironment();
 
-            sesion = entorno.createSession(
+            String rutaYolo = java.nio.file.Files.exists(java.nio.file.Path.of("models/yolo26n.onnx"))
+                    ? "models/yolo26n.onnx" : "reconocimiento3d/models/yolo26n.onnx";
+            sesion = entorno.createSession(rutaYolo, new OrtSession.SessionOptions());
+            System.out.println("YOLO general cargado correctamente");
 
-                    "models/yolo26n.onnx",
-
-                    new OrtSession.SessionOptions()
-
-            );
-
-            System.out.println("YOLO cargado correctamente");
+            String rutaLentes = java.nio.file.Files.exists(java.nio.file.Path.of("models/glasses_lentes.onnx"))
+                    ? "models/glasses_lentes.onnx" : "reconocimiento3d/models/glasses_lentes.onnx";
+            if (java.nio.file.Files.exists(java.nio.file.Path.of(rutaLentes))) {
+                sesionLentes = entorno.createSession(rutaLentes, new OrtSession.SessionOptions());
+                System.out.println("Modelo de lentes (glasses_lentes.onnx) cargado correctamente");
+            } else {
+                System.out.println("Aviso: No se encontró el modelo de lentes en " + rutaLentes);
+            }
 
             // 3. Abrir cámara
 
@@ -143,7 +189,6 @@ public class DetectorEnVivo {
             ventana.setVisible(true);
 
             // 5. Procesar cada fotograma
-            boolean visorAbierto = false;
             while (ventana.isDisplayable()) {
 
                 if (!camara.read(imagen) || imagen.empty()) {
@@ -342,12 +387,56 @@ public class DetectorEnVivo {
 
                                         mejorConfianza,
 
-                                        mejorClase
+                                        mejorClase,
+
+                                        clases[mejorClase]
 
                                 )
 
                         );
 
+                    }
+
+                    // Inferencia del modelo de lentes (goggles)
+                    if (sesionLentes != null) {
+                        try (
+                            OnnxTensor tensorLentes = OnnxTensor.createTensor(
+                                    entorno,
+                                    FloatBuffer.wrap(datos),
+                                    new long[] { 1, 3, TAMANO, TAMANO }
+                            );
+                            OrtSession.Result resultadoLentes = sesionLentes.run(
+                                    Collections.singletonMap("images", tensorLentes)
+                            )
+                        ) {
+                            float[][][] salidaL = (float[][][]) resultadoLentes.get(0).getValue();
+                            float[][] predL = salidaL[0];
+                            int canalGoggles = 6; // Clase goggles en índice 2 (4 + 2 = 6)
+
+                            for (int i = 0; i < predL[0].length; i++) {
+                                float confLentes = predL[canalGoggles][i];
+                                if (confLentes < 0.35f) {
+                                    continue;
+                                }
+
+                                float centroX = predL[0][i];
+                                float centroY = predL[1][i];
+                                float ancho = predL[2][i];
+                                float alto = predL[3][i];
+
+                                int x = Math.round((centroX - ancho / 2) * escalaX);
+                                int y = Math.round((centroY - alto / 2) * escalaY);
+                                int w = Math.round(ancho * escalaX);
+                                int h = Math.round(alto * escalaY);
+
+                                x = Math.max(0, Math.min(x, anchoOriginal - 1));
+                                y = Math.max(0, Math.min(y, altoOriginal - 1));
+                                w = Math.max(1, Math.min(w, anchoOriginal - x));
+                                h = Math.max(1, Math.min(h, altoOriginal - y));
+
+                                detecciones.add(new Deteccion(new Rect(x, y, w, h), confLentes, 100, "lentes"));
+                            }
+                        } catch (Exception ignored) {}
                     }
 
                     // 7. Ordenar por confianza: primero la más alta
@@ -372,7 +461,7 @@ public class DetectorEnVivo {
 
                         for (Deteccion aceptada : finales) {
 
-                            if (candidata.clase != aceptada.clase) {
+                            if (!candidata.nombreClase.equals(aceptada.nombreClase)) {
 
                                 continue;
 
@@ -402,85 +491,60 @@ public class DetectorEnVivo {
 
                     }
 
-                    // 9. Dibujar detecciones sobre la cámara
-                    // Comprobar si YOLO detectó una laptop
+                    // 9. Comprobar qué detectó YOLO
 
                     boolean laptopDetectada = false;
                     boolean telefonoDetectado = false;
+                    boolean lentesDetectados = false;
 
                     for (Deteccion d : finales) {
-                        String clase = clases[d.clase];
-
-                        if ("laptop".equals(clase)) {
-                            laptopDetectada = true;
-                        }
-
-                        if ("cell phone".equals(clase)) {
-                            telefonoDetectado = true;
-                        }
+                        if ("laptop".equals(d.nombreClase)) laptopDetectada = true;
+                        if ("cell phone".equals(d.nombreClase)) telefonoDetectado = true;
+                        if ("lentes".equals(d.nombreClase) || "goggles".equals(d.nombreClase)) lentesDetectados = true;
                     }
 
-                    // Abrir el visor 3D solamente una vez
-
+                    // Abrir el visor 3D solamente una vez.
+                    // visorAbierto solo vuelve a false cuando el tab del navegador se cierra
+                    // (el HTML llama a POST localhost:8001/cerrar en beforeunload).
                     try {
-                        if (laptopDetectada && !visorAbierto) {
-                            if (Desktop.isDesktopSupported()
-                                    && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                        if (!visorAbierto.get() && Desktop.isDesktopSupported()
+                                && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
 
+                            String modelo = null;
+                            if (lentesDetectados)        modelo = "lentes";
+                            else if (laptopDetectada)    modelo = "computador";
+                            else if (telefonoDetectado) modelo = "telefono";
+
+                            if (modelo != null) {
                                 Desktop.getDesktop().browse(
-                                        new URI("http://localhost:8000/visor3d.html?modelo=computador"));
-
-                                visorAbierto = true;
-                                System.out.println("Laptop detectada: abriendo modelo 3D");
-                            }
-                        } else if (telefonoDetectado && !visorAbierto) {
-                            if (Desktop.isDesktopSupported()
-                                    && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-
-                                Desktop.getDesktop().browse(
-                                        new URI("http://localhost:8000/visor3d.html?modelo=telefono"));
-
-                                visorAbierto = true;
-                                System.out.println("Teléfono detectado: abriendo modelo 3D");
+                                        new URI("http://localhost:8000/visor3d.html?modelo=" + modelo));
+                                visorAbierto.set(true);
+                                System.out.println("Objeto detectado (" + modelo + "): abriendo modelo 3D");
                             }
                         }
-
-                        // Permitir una nueva detección cuando ya no haya laptop ni teléfono
-                        if (!laptopDetectada && !telefonoDetectado) {
-                            visorAbierto = false;
-                        }
-
                     } catch (Exception e) {
-                        System.out.println(
-                                "No se pudo abrir el visor 3D: " + e.getMessage());
+                        System.out.println("No se pudo abrir el visor 3D: " + e.getMessage());
                     }
 
                     for (Deteccion d : finales) {
                         Rect caja = d.caja;
+                        Scalar color = "lentes".equals(d.nombreClase)
+                                ? new Scalar(255, 165, 0)
+                                : new Scalar(0, 255, 0);
+
                         Imgproc.rectangle(
                                 imagen,
                                 caja,
-                                new Scalar(0, 255, 0),
+                                color,
                                 2);
 
-                        String claseDetectada = clases[d.clase];
-                        String categoria = obtenerCategoria(claseDetectada);
+                        String categoria = obtenerCategoria(d.nombreClase);
 
-                        String etiqueta;
-
-                        if (categoria != null) {
-                            etiqueta = String.format(
-                                    Locale.US,
-                                    "%s (%.0f%%)",
-                                    categoria,
-                                    d.confianza * 100);
-                        } else {
-                            etiqueta = String.format(
-                                    Locale.US,
-                                    "%s (%.0f%%)",
-                                    claseDetectada,
-                                    d.confianza * 100);
-                        }
+                        String etiqueta = String.format(
+                                Locale.US,
+                                "%s (%.0f%%)",
+                                categoria != null ? categoria : d.nombreClase,
+                                d.confianza * 100);
 
                         int textoY = Math.max(20, caja.y - 8);
                         Imgproc.putText(
@@ -489,7 +553,7 @@ public class DetectorEnVivo {
                                 new Point(caja.x, textoY),
                                 Imgproc.FONT_HERSHEY_SIMPLEX,
                                 0.65,
-                                new Scalar(0, 255, 0),
+                                color,
                                 2
 
                         );
@@ -602,6 +666,20 @@ public class DetectorEnVivo {
 
             }
 
+            if (sesionLentes != null) {
+
+                try {
+
+                    sesionLentes.close();
+
+                } catch (Exception e) {
+
+                    System.out.println("Error al cerrar modelo de lentes");
+
+                }
+
+            }
+
             if (entorno != null) {
 
                 try {
@@ -657,6 +735,11 @@ public class DetectorEnVivo {
 
             case "cell phone":
                 return "telefono";
+
+            case "glasses":
+            case "goggles":
+            case "lentes":
+                return "lentes";
 
             default:
                 return null;

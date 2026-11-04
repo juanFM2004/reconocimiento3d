@@ -17,6 +17,7 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <maven.compiler.release>17</maven.compiler.release>
+    <jme3.version>3.8.0-stable</jme3.version>
   </properties>
 
   <dependencies>
@@ -38,6 +39,34 @@
       <groupId>com.microsoft.onnxruntime</groupId>
       <artifactId>onnxruntime</artifactId>
       <version>1.20.0</version>
+    </dependency>
+
+    <!-- Motor gráfico jMonkeyEngine -->
+    <dependency>
+      <groupId>org.jmonkeyengine</groupId>
+      <artifactId>jme3-core</artifactId>
+      <version>${jme3.version}</version>
+    </dependency>
+
+<!-- Soporte para escritorio -->
+    <dependency>
+      <groupId>org.jmonkeyengine</groupId>
+      <artifactId>jme3-desktop</artifactId>
+      <version>${jme3.version}</version>
+    </dependency>
+
+<!-- Renderizado con LWJGL 3 -->
+    <dependency>
+      <groupId>org.jmonkeyengine</groupId>
+      <artifactId>jme3-lwjgl3</artifactId>
+      <version>${jme3.version}</version>
+    </dependency>
+
+<!-- Carga de modelos GLB y glTF -->
+    <dependency>
+      <groupId>org.jmonkeyengine</groupId>
+      <artifactId>jme3-plugins</artifactId>
+      <version>${jme3.version}</version>
     </dependency>
     
 

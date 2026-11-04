@@ -58,7 +58,7 @@
   <body>
     <div id="panel">
       <h2>Reconocimiento3D</h2>
-      <p>Laptop: modelo 3D</p>
+      <p id="descripcion-modelo">Modelo 3D</p>
       <p>Arrastra el ratón para girar y usa la rueda para acercar.</p>
       <button id="centrar">Centrar modelo</button>
       <p id="estado">Cargando modelo...</p>
@@ -72,10 +72,11 @@
       const escena = new THREE.Scene();
       escena.background = new THREE.Color(0x101827);
 
+      // near reducido a 0.001 para evitar el recorte/estiramiento al acercar
       const camara = new THREE.PerspectiveCamera(
         45,
         window.innerWidth / window.innerHeight,
-        0.1,
+        0.001,
         1000,
       );
       camara.position.set(3, 2, 4);
@@ -84,6 +85,9 @@
       renderizador.setSize(window.innerWidth, window.innerHeight);
       renderizador.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderizador.outputColorSpace = THREE.SRGBColorSpace;
+      // Tone mapping necesario para que los materiales PBR del GLB muestren texturas correctamente
+      renderizador.toneMapping = THREE.ACESFilmicToneMapping;
+      renderizador.toneMappingExposure = 1.0;
       document.body.appendChild(renderizador.domElement);
 
       const controles = new OrbitControls(camara, renderizador.domElement);
@@ -95,6 +99,11 @@
       luz.position.set(5, 8, 5);
       escena.add(luz);
 
+      // Segunda luz para iluminar el lado contrario y evitar zonas muy oscuras
+      const luzTrasera = new THREE.DirectionalLight(0xffffff, 0.6);
+      luzTrasera.position.set(-5, 3, -5);
+      escena.add(luzTrasera);
+
       const rejilla = new THREE.GridHelper(10, 10, 0x475569, 0x263449);
       escena.add(rejilla);
 
@@ -103,9 +112,22 @@
       const parametros = new URLSearchParams(window.location.search);
       const modeloSolicitado = parametros.get("modelo") || "computador";
 
+      const nombres = {
+        computador: "Laptop",
+        telefono: "Teléfono",
+        lentes: "Lentes",
+      };
+      const nombreActual = nombres[modeloSolicitado] || modeloSolicitado;
+      document.title = `Reconocimiento3D - ${nombreActual}`;
+      const descElem = document.getElementById("descripcion-modelo");
+      if (descElem) {
+        descElem.textContent = `${nombreActual}: modelo 3D`;
+      }
+
       const modelos = {
         computador: "./assets/Modelos/computador/laptop.glb",
         telefono: "./assets/Modelos/telefono/smartphone.glb",
+        lentes: "./assets/Modelos/lentes/glasses.glb",
       };
 
       const rutaModelo = modelos[modeloSolicitado] || modelos.computador;
@@ -116,16 +138,31 @@
         rutaModelo,
         (gltf) => {
           laptop = gltf.scene;
-          escena.add(laptop);
 
+          // Calcular dimensiones originales
           const caja = new THREE.Box3().setFromObject(laptop);
           const centro = caja.getCenter(new THREE.Vector3());
           const tamano = caja.getSize(new THREE.Vector3());
           const mayor = Math.max(tamano.x, tamano.y, tamano.z);
 
-          laptop.position.sub(centro);
+          // Normalizar escala: el modelo queda con tamaño máximo = 2 unidades,
+          // independientemente de si el GLB viene en mm, cm o m
+          if (mayor > 0) {
+            const factorEscala = 2 / mayor;
+            laptop.scale.setScalar(factorEscala);
+          }
 
-          const distancia = Math.max(mayor * 1.8, 2);
+          // Centrar modelo tras el escalado
+          laptop.position.sub(centro.multiplyScalar(laptop.scale.x));
+
+          escena.add(laptop);
+
+          // Recalcular caja tras normalizar
+          const cajaFinal = new THREE.Box3().setFromObject(laptop);
+          const tamanoFinal = cajaFinal.getSize(new THREE.Vector3());
+          const mayorFinal = Math.max(tamanoFinal.x, tamanoFinal.y, tamanoFinal.z);
+
+          const distancia = Math.max(mayorFinal * 1.8, 2);
           camara.position.set(distancia, distancia * 0.65, distancia);
           controles.target.set(0, 0, 0);
           controles.update();
@@ -167,6 +204,11 @@
       }
 
       animar();
+
+      // Avisar a Java cuando el tab se cierre para permitir una nueva detección
+      window.addEventListener("beforeunload", () => {
+        navigator.sendBeacon("http://localhost:8001/cerrar");
+      });
     </script>
   </body>
 </html>

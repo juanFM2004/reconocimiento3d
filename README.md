@@ -1,6 +1,6 @@
 # Reconocimiento3D
 
-Proyecto Java orientado a la captura de vídeo y a la futura identificación de objetos para mostrar modelos 3D asociados. En el estado actual, el repositorio contiene una base funcional para compilar, comprobar la cámara y visualizar su imagen en una ventana Swing. El reconocimiento mediante IA, la interfaz principal y la carga de modelos 3D todavía están preparados como extensiones, pero no implementados.
+Proyecto Java orientado a la captura de vídeo y a la identificación de objetos para mostrar modelos 3D asociados. Incluye una ventana 3D que carga y centra el modelo de laptop, además de las herramientas de captura de vídeo con OpenCV.
 
 ## Estado actual
 
@@ -13,13 +13,13 @@ Proyecto Java orientado a la captura de vídeo y a la futura identificación de 
 - Captura de una imagen individual y muestra de sus dimensiones.
 - Visualización continua de la cámara en una ventana gráfica de 800 x 600 píxeles.
 - Conversión de cada fotograma de OpenCV (`Mat`) a una imagen que Swing puede mostrar.
+- Visualización de `assets/Modelos/computador/laptop.glb` en la ventana 3D `VentanaPrincipal`.
 - Prueba unitaria básica de JUnit.
 
 ### Funcionalidades aún no implementadas
 
 - `DetectorObjetos` no ejecuta reconocimiento: siempre devuelve `"ninguno"`.
 - ONNX Runtime está declarado como dependencia, pero ningún código carga todavía un modelo `.onnx` ni realiza inferencia.
-- `VentanaPrincipal` existe como clase vacía y no es la ventana que muestra la cámara.
 - `GestorModelos` existe como clase vacía; no carga, selecciona ni renderiza modelos 3D.
 - La carpeta `models/` no contiene modelos actualmente.
 - No existe todavía un flujo que conecte cámara, detector, modelo reconocido e interfaz 3D.
@@ -53,6 +53,7 @@ Las dependencias se resuelven automáticamente desde `reconocimiento3d/pom.xml`:
 | --- | --- | --- |
 | `org.openpnp:opencv` | `4.9.0-0` | API Java y librerías nativas utilizadas para abrir la cámara, capturar fotogramas y convertir imágenes. Incluye la clase `nu.pattern.OpenCV`. |
 | `com.microsoft.onnxruntime:onnxruntime` | `1.22.0` | Dependencia prevista para inferencia de modelos ONNX; todavía no es utilizada por las clases actuales. |
+| `org.jmonkeyengine:jme3-core`, `jme3-desktop`, `jme3-lwjgl3`, `jme3-plugins` | `3.8.0-stable` | Renderizado de la ventana 3D y carga del modelo glTF/GLB. |
 | `junit:junit` | `4.11` | Pruebas unitarias; solo se incluye durante la fase de test. |
 | `org.hamcrest:hamcrest-core` | transitiva | Soporte de JUnit. Maven la descarga automáticamente. |
 
@@ -92,6 +93,14 @@ mvn exec:java -Dexec.mainClass="com.reconocimiento3d.App"
 ```
 
 `App` solo imprime un encabezado y los mensajes `Proyecto iniciado correctamente` y `Java funcionando correctamente`. No abre la cámara ni la ventana gráfica.
+
+Para abrir la ventana que muestra el modelo 3D, ejecuta desde `reconocimiento3d`:
+
+```powershell
+mvn exec:java -Dexec.mainClass="com.reconocimiento3d.Interfaz.VentanaPrincipal"
+```
+
+La aplicación carga `assets/Modelos/computador/laptop.glb`; usa el ratón para orbitar y la rueda para acercar o alejar.
 
 ### 2. Prueba de cámara sin interfaz gráfica
 
@@ -133,7 +142,7 @@ Al cerrar la ventana, el bucle deja de ejecutarse y se libera la cámara. El vis
 reconocimiento3d/
 ├── pom.xml
 ├── assets/
-│   └── Modelos/       # Reservado para recursos 3D
+│   └── Modelos/       # Modelos 3D (incluye computador/laptop.glb)
 ├── models/            # Actualmente vacío; reservado para modelos de IA o 3D
 ├── src/
 │   ├── main/java/com/reconocimiento3d/
@@ -154,7 +163,7 @@ reconocimiento3d/
 - **`Camara`**: prueba técnica mínima de OpenCV. Captura un fotograma y muestra sus dimensiones por consola.
 - **`VisorCamara`**: prueba visual de captura continua. Une OpenCV con Swing y administra el ciclo de vida de la ventana y de la cámara.
 - **`DetectorObjetos`**: API inicial para reconocimiento. Su método `detectarObjeto()` devuelve siempre `"ninguno"`; es un placeholder para conectar una futura IA.
-- **`VentanaPrincipal`**: lugar previsto para la interfaz general de la aplicación, actualmente sin atributos ni métodos.
+- **`VentanaPrincipal`**: ventana 3D; carga, centra e ilumina el modelo de laptop y permite orbitar la cámara.
 - **`GestorModelos`**: lugar previsto para administrar modelos 3D, actualmente sin atributos ni métodos.
 - **`AppTest`**: prueba JUnit de ejemplo que verifica `assertTrue(true)`. Sirve para comprobar el pipeline de tests, pero no valida la cámara ni el reconocimiento.
 
@@ -175,10 +184,10 @@ Nombre o clase del objeto
 	↓
 GestorModelos                     (pendiente de implementar)
 	↓
-VentanaPrincipal / visor 3D       (pendiente de implementar)
+VentanaPrincipal / visor 3D       (visor disponible; falta conectar la selección automática)
 ```
 
-Actualmente solo están operativos los dos primeros tramos y el visor 2D de `VisorCamara`. La dependencia de ONNX Runtime no produce ningún resultado por sí sola: todavía sería necesario cargar un archivo `.onnx`, preparar el tensor de entrada, ejecutar la inferencia, interpretar las clases y conectar el resultado con el gestor de modelos.
+El visor 3D puede abrirse directamente con `VentanaPrincipal`; aún falta conectar la detección automática con la selección del modelo. La dependencia de ONNX Runtime no produce ningún resultado por sí sola: todavía sería necesario cargar un archivo `.onnx`, preparar el tensor de entrada, ejecutar la inferencia, interpretar las clases y conectar el resultado con el gestor de modelos.
 
 ## Solución de problemas
 
@@ -210,7 +219,7 @@ Para convertir este prototipo en un sistema completo de reconocimiento 3D habrí
 2. El preprocesamiento de imágenes requerido por el modelo de IA.
 3. La carga y ejecución de un modelo ONNX en `DetectorObjetos`.
 4. La asociación entre etiquetas detectadas y archivos de `assets/Modelos` o `models/`.
-5. La carga y renderizado de modelos 3D en `GestorModelos` y `VentanaPrincipal`.
+5. La selección automática del modelo 3D en `GestorModelos` a partir de las detecciones.
 6. Manejo de errores, cierre seguro de recursos y configuración de cámara.
 7. Pruebas que cubran captura, detección, selección de modelos y ejecución en equipos sin cámara.
 
