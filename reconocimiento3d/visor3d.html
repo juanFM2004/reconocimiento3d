@@ -3,45 +3,470 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reconocimiento3D - Laptop</title>
+    <title>Reconocimiento3D - Visor Interactivo</title>
 
     <style>
+      :root {
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --accent: #06b6d4;
+        --bg-panel: rgba(15, 23, 42, 0.88);
+        --border-glass: rgba(255, 255, 255, 0.12);
+        --text-muted: #94a3b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         overflow: hidden;
-        font-family: Arial, sans-serif;
-        background: #101827;
-        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #0b0f19;
+        color: #f8fafc;
+        user-select: none;
       }
 
+      /* Panel de control superior izquierdo */
       #panel {
         position: absolute;
         top: 20px;
         left: 20px;
-        z-index: 10;
-        background: rgba(15, 23, 42, 0.92);
-        padding: 18px;
-        border-radius: 12px;
-        max-width: 300px;
+        z-index: 20;
+        background: var(--bg-panel);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        padding: 18px 22px;
+        border-radius: 16px;
+        border: 1px solid var(--border-glass);
+        max-width: 360px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        transition: all 0.3s ease;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
       }
 
       h2 {
-        margin-top: 0;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #60a5fa, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .badge {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 20px;
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+
+      .badge-armado {
+        background: rgba(16, 185, 129, 0.2);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+
+      .badge-desarmado {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fcd34d;
+        border-color: rgba(245, 158, 11, 0.3);
+      }
+
+      #descripcion-modelo {
+        margin: 4px 0 10px 0;
+        font-size: 14px;
+        color: #e2e8f0;
+        font-weight: 500;
+      }
+
+      .instrucciones {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+        margin-bottom: 14px;
+      }
+
+      .botones-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       button {
-        padding: 10px 14px;
-        margin: 5px 4px 0 0;
-        border: 0;
-        border-radius: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
         cursor: pointer;
-        background: #2563eb;
-        color: white;
+        background: #1e293b;
+        color: #f8fafc;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+
+      button:hover {
+        background: #334155;
+        border-color: rgba(255, 255, 255, 0.25);
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button.btn-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: 1px solid rgba(147, 197, 253, 0.3);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      }
+
+      button.btn-primary:hover {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+      }
+
+      button.btn-warning {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        border: 1px solid rgba(253, 230, 138, 0.3);
+        box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+      }
+
+      button.btn-warning:hover {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        box-shadow: 0 6px 18px rgba(217, 119, 6, 0.5);
       }
 
       #estado {
+        margin-top: 12px;
+        margin-bottom: 0;
+        font-size: 12px;
+        color: #38bdf8;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* Panel flotante de Especificaciones Generales */
+      #panel-especificaciones {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 20;
+        background: var(--bg-panel);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid var(--border-glass);
+        width: 380px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      #panel-especificaciones.oculto {
+        transform: translateX(420px);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .specs-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .specs-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .close-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+
+      .close-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+
+      .specs-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .spec-item {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 10px 12px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+
+      .spec-item:hover {
+        border-color: rgba(96, 165, 250, 0.4);
+        transform: translateX(-2px);
+      }
+
+      .spec-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--accent);
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 3px;
+      }
+
+      .spec-value {
+        font-size: 13px;
+        color: #f8fafc;
+        font-weight: 500;
+        line-height: 1.35;
+      }
+
+      /* Modal de detalle de componente al hacer click en pieza desarmada */
+      #modal-componente {
+        position: absolute;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        z-index: 30;
+        background: rgba(15, 23, 42, 0.94);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        border-radius: 18px;
+        padding: 22px 26px;
+        width: 90%;
+        max-width: 640px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.2);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      #modal-componente.activo {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 14px;
+      }
+
+      .modal-title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .modal-icon {
+        font-size: 32px;
+        background: rgba(59, 130, 246, 0.15);
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #f8fafc;
+      }
+
+      .modal-category {
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .modal-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 50vh;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .modal-block {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+
+      .modal-block-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
         color: #93c5fd;
-        font-size: 14px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .modal-block-content {
+        font-size: 13.5px;
+        color: #e2e8f0;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .capacidades-list {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13px;
+        color: #e2e8f0;
+        line-height: 1.55;
+      }
+
+      .capacidades-list li {
+        margin-bottom: 4px;
+      }
+
+      /* Barra inferior de navegación de componentes (modo desarmado) */
+      #barra-componentes {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        background: var(--bg-panel);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--border-glass);
+        border-radius: 40px;
+        padding: 6px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 95vw;
+        overflow-x: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        transition: all 0.3s ease;
+      }
+
+      #barra-componentes.oculto {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-50%) translateY(40px);
+      }
+
+      .chip-componente {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+      }
+
+      .chip-componente:hover {
+        background: #3b82f6;
+        color: #fff;
+        border-color: #60a5fa;
+        transform: translateY(-2px);
+      }
+
+      .chip-componente.seleccionado {
+        background: linear-gradient(135deg, #2563eb, #0891b2);
+        color: #fff;
+        border-color: #38bdf8;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+      }
+
+      /* Indicador de ayuda flotante */
+      #pildora-ayuda {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 15;
+        background: rgba(30, 41, 59, 0.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 30px;
+        padding: 6px 16px;
+        font-size: 12.5px;
+        color: #bae6fd;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      #pildora-ayuda.oculto {
+        opacity: 0;
+      }
+
+      /* Scrollbar estilizada */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.4);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.3);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.5);
       }
     </style>
 
@@ -56,23 +481,605 @@
   </head>
 
   <body>
+    <!-- Panel Principal Superior Izquierdo -->
     <div id="panel">
-      <h2>Reconocimiento3D</h2>
-      <p id="descripcion-modelo">Modelo 3D</p>
-      <p>Arrastra el ratón para girar y usa la rueda para acercar.</p>
-      <button id="centrar">Centrar modelo</button>
-      <p id="estado">Cargando modelo...</p>
+      <div class="panel-header">
+        <h2>Reconocimiento 3D</h2>
+        <span id="badge-estado" class="badge badge-armado">Armada</span>
+      </div>
+      <p id="descripcion-modelo">Cargando modelo...</p>
+      <div class="instrucciones">
+        Arrastra para orbitar la cámara y usa la rueda del ratón para acercar o alejar.
+      </div>
+      <div class="botones-container">
+        <button id="btn-desarmar" class="btn-warning" style="display: none;">
+          <span>🔧</span> <span id="btn-desarmar-texto">Desarmar</span>
+        </button>
+        <button id="btn-toggle-specs">
+          <span>📋</span> Especificaciones
+        </button>
+        <button id="centrar">
+          <span>🎯</span> Centrar
+        </button>
+      </div>
+      <p id="estado">Iniciando visor...</p>
     </div>
+
+    <!-- Píldora de ayuda superior central -->
+    <div id="pildora-ayuda" class="oculto">
+      <span>💡</span> Haz clic sobre cualquier pieza o selecciona un componente abajo para ver sus detalles.
+    </div>
+
+    <!-- Panel Lateral de Especificaciones Generales -->
+    <div id="panel-especificaciones">
+      <div class="specs-header">
+        <div class="specs-title">
+          <span id="specs-icono">💻</span> <span id="specs-titulo">Especificaciones</span>
+        </div>
+        <button id="cerrar-specs" class="close-btn" title="Cerrar panel">✕</button>
+      </div>
+      <div class="specs-grid" id="specs-grid"></div>
+    </div>
+
+    <!-- Modal / Tarjeta Informativa de Componente Individual (Modo Desarmado) -->
+    <div id="modal-componente">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div id="comp-icono" class="modal-icon">⚙️</div>
+          <div>
+            <div id="comp-categoria" class="modal-category">Categoría</div>
+            <h3 id="comp-nombre" class="modal-title">Nombre del Componente</h3>
+          </div>
+        </div>
+        <button id="cerrar-modal-comp" class="close-btn" title="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-sections">
+        <div class="modal-block">
+          <div class="modal-block-title">
+            <span>🏷️</span> ¿Qué es?
+          </div>
+          <p id="comp-que-es" class="modal-block-content"></p>
+        </div>
+
+        <div class="modal-block">
+          <div class="modal-block-title">
+            <span>⚙️</span> ¿Para qué sirve?
+          </div>
+          <p id="comp-para-que-sirve" class="modal-block-content"></p>
+        </div>
+
+        <div class="modal-block">
+          <div class="modal-block-title">
+            <span>📊</span> Capacidades y Especificaciones Técnicas
+          </div>
+          <ul id="comp-capacidades" class="capacidades-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Inferior de Componentes Rápidos (Modo Desarmado) -->
+    <div id="barra-componentes" class="oculto"></div>
 
     <script type="module">
       import * as THREE from "three";
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+      import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
+      // ===================================================
+      // Catálogo Integral de Configuraciones por Modelo
+      // ===================================================
+      const CONFIG_MODELOS = {
+        computador: {
+          id: "computador",
+          nombre: "Laptop",
+          descripcion: "Laptop: Modelo 3D",
+          tieneDesarmado: true,
+          rutaArmado: "./assets/Modelos/computador/laptop.glb",
+          rutaDesarmado: "./assets/Modelos/computador/laptop_exploded_view.glb",
+          textoDesarmar: "Desarmar laptop",
+          textoArmar: "Armar laptop",
+          badgeArmado: "Armada",
+          badgeDesarmado: "Desarmada",
+          iconoSpecs: "💻",
+          tituloSpecs: "Especificaciones de la Laptop",
+          specsGenerales: [
+            { label: "🧠 Procesador (CPU)", value: "Intel Core i7-13700H (14 núcleos, 20 hilos, hasta 5.0 GHz Turbo)" },
+            { label: "🎮 Gráficos (GPU)", value: "NVIDIA GeForce RTX 4060 (8 GB GDDR6) + Intel Iris Xe Graphics" },
+            { label: "⚡ Memoria RAM", value: "16 GB DDR5-5200 MHz en doble canal (ampliable hasta 64 GB)" },
+            { label: "💾 Almacenamiento", value: "1 TB SSD M.2 NVMe PCIe 4.0 x4 (lectura hasta 7000 MB/s)" },
+            { label: "🖥️ Pantalla", value: "15.6\" IPS QHD (2560 × 1440), 165 Hz, 100% sRGB, 350 nits" },
+            { label: "🔋 Batería", value: "Iones de litio de 4 celdas, 76 Wh, carga rápida USB-C 100W PD" },
+            { label: "❄️ Refrigeración", value: "Doble ventilador turbina de alto flujo con 4 heatpipes de cobre" },
+            { label: "📡 Conectividad", value: "Wi-Fi 6E (802.11ax), Bluetooth 5.3, Thunderbolt 4, HDMI 2.1" },
+            { label: "🛡️ Chasis y Peso", value: "Aleación de aluminio anodizado, 1.85 kg de peso, 18.9 mm de grosor" }
+          ],
+          componentes: [
+            {
+              id: "teclado",
+              nombre: "Teclado y Cubierta Superior (Palmrest)",
+              categoria: "Dispositivo de Entrada",
+              icono: "⌨️",
+              pos: { x: 0.18, y: 0.84, z: 0.28 },
+              meshCenter: { x: 0.18, y: 0.77, z: 0.28 },
+              queEs: "Cubierta superior del chasis que integra el teclado físico con mecanismo de tijera, membrana conductiva y reposamuñecas.",
+              paraQueSirve: "Dispositivo de entrada primario para redactar texto, ejecutar atajos y enviar comandos al sistema mediante pulsaciones de teclas.",
+              capacidades: [
+                "Mecanismo de tijera de bajo perfil con recorrido de 1.4 mm",
+                "Retroiluminación LED blanco / RGB con ajuste por zonas",
+                "Matriz con tecnología Anti-Ghosting completa",
+                "Vida útil de más de 10 millones de pulsaciones por tecla"
+              ]
+            },
+            {
+              id: "touchpad",
+              nombre: "Panel Táctil (Touchpad / Trackpad)",
+              categoria: "Dispositivo Puntero",
+              icono: "🖱️",
+              pos: { x: 0.18, y: 0.76, z: 0.68 },
+              meshCenter: { x: 0.18, y: 0.70, z: 0.68 },
+              queEs: "Superficie táctil capacitiva con pulsadores mecánicos integrados y controlador multitáctil de precisión en el reposamuñecas.",
+              paraQueSirve: "Permite controlar el cursor, hacer clics, desplazamientos y gestos multitáctiles con los dedos sin requerir un ratón externo.",
+              capacidades: [
+                "Superficie de vidrio suave con fricción ultra baja",
+                "Controladores Microsoft Precision con gestos de hasta 4 dedos",
+                "Tasa de sondeo de 120 Hz para una respuesta instantánea",
+                "Detección inteligente de palma para evitar clics accidentales"
+              ]
+            },
+            {
+              id: "pantalla",
+              nombre: "Pantalla y Tapa Superior (Display)",
+              categoria: "Salida Visual / Pantalla",
+              icono: "🖥️",
+              pos: { x: 0.15, y: 0.42, z: -0.75 },
+              meshCenter: { x: 0.15, y: 0.35, z: -0.75 },
+              queEs: "Módulo de visualización con panel LCD/IPS y bisagras reforzadas integrado en la tapa superior inclinada en la parte posterior.",
+              paraQueSirve: "Proyecta la interfaz gráfica del sistema operativo, aplicaciones y contenido multimedia convirtiendo señales de video digitales en imágenes nítidas.",
+              capacidades: [
+                "Panel IPS de 15.6 pulgadas con resolución QHD (2560 × 1440)",
+                "Tasa de refresco ultra fluida de 165 Hz (tiempo de respuesta 3 ms)",
+                "Cobertura de color 100% sRGB y DCI-P3 con 350 nits de brillo",
+                "Cámara web HD 1080p con obturador de privacidad y micrófonos duales"
+              ]
+            },
+            {
+              id: "ssd",
+              nombre: "Almacenamiento SSD M.2 NVMe PCIe 4.0",
+              categoria: "Almacenamiento Masivo No Volátil",
+              icono: "💾",
+              pos: { x: -0.92, y: -0.54, z: 0.15 },
+              meshCenter: { x: -0.92, y: -0.62, z: 0.15 },
+              queEs: "Unidad de estado sólido M.2 2280 con memoria flash 3D NAND de alta velocidad, ubicada como pieza modular al lado izquierdo de la laptop.",
+              paraQueSirve: "Guarda permanentemente el sistema operativo, los programas y todos tus archivos personales; no se borra al apagar el equipo y arranca en pocos segundos.",
+              capacidades: [
+                "Capacidad: 1 TB (1024 GB) con formato M.2 PCIe 4.0 x4",
+                "Velocidad de lectura secuencial: hasta 7000 MB/s",
+                "Velocidad de escritura secuencial: hasta 5000 MB/s",
+                "Durabilidad superior a 600 TBW con cifrado de hardware AES de 256 bits"
+              ]
+            },
+            {
+              id: "ram",
+              nombre: "Memoria RAM (SO-DIMM DDR5)",
+              categoria: "Memoria de Trabajo Rápida",
+              icono: "⚡",
+              pos: { x: 0.71, y: -0.50, z: 0.12 },
+              meshCenter: { x: 0.71, y: -0.58, z: 0.12 },
+              queEs: "Módulos de memoria de acceso aleatorio síncrona en factor de forma compacto SO-DIMM, ubicados en la pieza modular al lado derecho.",
+              paraQueSirve: "Almacena temporalmente los datos y programas que la CPU está procesando en ese instante, permitiendo alternar entre decenas de aplicaciones sin demoras.",
+              capacidades: [
+                "Capacidad: 16 GB (2x 8 GB) en configuración Dual-Channel (expandible a 64 GB)",
+                "Velocidad de bus: DDR5 a 5200 MT/s",
+                "Ancho de banda superior a 41.6 GB/s por canal",
+                "Voltaje operativo ultra eficiente de 1.1V con módulo PMIC propio"
+              ]
+            },
+            {
+              id: "refrigeracion",
+              nombre: "Sistema Térmico (Disipador y Ventiladores)",
+              categoria: "Refrigeración Activa y Pasiva",
+              icono: "❄️",
+              pos: { x: 0.18, y: 0.06, z: 0.28 },
+              meshCenter: { x: 0.18, y: -0.01, z: 0.28 },
+              queEs: "Conjunto de tubos de cobre con fluido de cambio de fase (Heatpipes), aletas de disipación y dos ventiladores de turbina situados en la sección trasera de la placa.",
+              paraQueSirve: "Absorbe y expulsa el calor generado por la CPU y la GPU hacia las rejillas exteriores, evitando el sobrecalentamiento y la degradación del rendimiento.",
+              capacidades: [
+                "Capacidad de disipación térmica calculada para más de 95W TDP",
+                "Turbinas duales con aspas de polímero de cristal líquido (LCP) a 1800 - 5200 RPM",
+                "4 heatpipes de cobre puro de contacto directo",
+                "Modo 0 dB: ventiladores apagados en tareas ligeras"
+              ]
+            },
+            {
+              id: "cpu",
+              nombre: "Procesador (CPU) y Gráficos (GPU)",
+              categoria: "Unidad Central de Procesamiento",
+              icono: "🧠",
+              pos: { x: 0.10, y: 0.06, z: -0.05 },
+              meshCenter: { x: 0.10, y: -0.02, z: -0.05 },
+              queEs: "Circuito integrado de silicio soldado a la placa madre mediante micro-esferas de estaño (BGA) en la zona central.",
+              paraQueSirve: "Es el cerebro informático de la computadora; ejecuta las instrucciones del software, procesa datos matemáticos y renderiza gráficos 2D y 3D.",
+              capacidades: [
+                "14 núcleos híbridos (6 Performance-cores + 8 Efficient-cores) y 20 hilos",
+                "Frecuencia base de 2.4 GHz y Turbo Boost de hasta 5.0 GHz",
+                "24 MB de memoria Intel Smart Cache L3",
+                "GPU dedicada NVIDIA GeForce RTX 4060 con 8 GB GDDR6 y núcleos Tensor para IA"
+              ]
+            },
+            {
+              id: "placaBase",
+              nombre: "Placa Base / Motherboard",
+              categoria: "Circuito Impreso Principal (PCB)",
+              icono: "🔌",
+              pos: { x: 0.15, y: 0.03, z: -0.30 },
+              meshCenter: { x: 0.15, y: -0.05, z: -0.30 },
+              queEs: "Placa multicapa de fibra de vidrio con pistas de cobre que integra el chipset, los circuitos reguladores de voltaje (VRM) y puertos I/O.",
+              paraQueSirve: "Es la columna vertebral que interconecta y suministra energía eléctrica estabilizada a todos los componentes de la computadora.",
+              capacidades: [
+                "PCB de 10 capas para máxima estabilidad eléctrica contra interferencias",
+                "Controladores Thunderbolt 4 (40 Gbps), USB 3.2 Gen 2, HDMI 2.1 y audio HD",
+                "Módulo de seguridad criptográfica TPM 2.0 integrado para BitLocker",
+                "Módulo Wi-Fi 6E (802.11ax) tribanda y Bluetooth 5.3"
+              ]
+            },
+            {
+              id: "bateria",
+              nombre: "Batería de Iones de Litio (Li-Ion)",
+              categoria: "Alimentación Eléctrica Portátil",
+              icono: "🔋",
+              pos: { x: 0.15, y: -0.32, z: -0.50 },
+              meshCenter: { x: 0.15, y: -0.40, z: -0.50 },
+              queEs: "Paquete interno de celdas prismáticas recargables de iones de litio con placa BMS inteligente de protección en la capa inferior.",
+              paraQueSirve: "Provee energía eléctrica continua y regulada a todos los circuitos de la laptop cuando no está conectada al enchufe de pared.",
+              capacidades: [
+                "Capacidad total de 76 Wh (4 celdas)",
+                "Voltaje nominal de 15.2 V con protección contra sobretensión y cortocircuitos",
+                "Autonomía estimada: 7 a 10 horas de uso productivo",
+                "Carga rápida USB-C Power Delivery (50% de batería en 30 minutos a 100W)"
+              ]
+            },
+            {
+              id: "carcasaInferior",
+              nombre: "Carcasa Inferior (Tapa Trasera / Base)",
+              categoria: "Estructura y Protección Externa",
+              icono: "🛡️",
+              pos: { x: 0.05, y: -0.71, z: 0.18 },
+              meshCenter: { x: 0.05, y: -0.79, z: 0.18 },
+              queEs: "Tapa protectora inferior del chasis fabricada en aleación de aluminio y magnesio con rejillas de ventilación y patas antideslizantes.",
+              paraQueSirve: "Protege los componentes internos contra golpes y suciedad, canaliza el flujo de aire fresco y aísla contra interferencias electromagnéticas.",
+              capacidades: [
+                "Construcción en aleación de aluminio-magnesio mecanizado",
+                "Rejillas de ventilación optimizadas con filtros antipolvo de malla fina",
+                "Patas de goma vulcanizada para elevación y mejor flujo térmico",
+                "Tornillos cautivos Torx T5 para fácil mantenimiento preventivo"
+              ]
+            }
+          ]
+        },
+        lentes: {
+          id: "lentes",
+          nombre: "Lentes",
+          descripcion: "Lentes / Anteojos: Modelo 3D",
+          tieneDesarmado: true,
+          rutaArmado: "./assets/Modelos/lentes/glasses.glb",
+          rutaDesarmado: "./assets/Modelos/lentes/eyeglasses_exploded.glb",
+          textoDesarmar: "Desarmar lentes",
+          textoArmar: "Armar lentes",
+          badgeArmado: "Armados",
+          badgeDesarmado: "Desarmados",
+          iconoSpecs: "👓",
+          tituloSpecs: "Especificaciones de los Lentes",
+          specsGenerales: [
+            { label: "🕶️ Tipo de Montura", value: "Montura completa unisex de diseño ergonómico y perfil ligero" },
+            { label: "🛡️ Material del Armazón", value: "Acetato de celulosa de alta densidad y aleación de titanio" },
+            { label: "🔍 Cristales Ópticos", value: "Policarbonato orgánico oftálmico de alto índice de refracción (1.61)" },
+            { label: "☀️ Protección UV", value: "Filtro UV400 total (100% bloqueo contra radiación UVA y UVB)" },
+            { label: "✨ Tratamiento Antirreflejo", value: "7 capas antirreflejantes multicapa por ambas caras (Hard Coat 8H)" },
+            { label: "💻 Filtro de Luz Azul", value: "Tecnología Blue Light Blocking para pantallas digitales (415-455 nm)" },
+            { label: "🔩 Mecanismo de Bisagra", value: "Bisagras flex con muelle elástico de apertura lateral de hasta +15°" },
+            { label: "👃 Apoyo Nasal", value: "Almohadillas de silicona médica hipoalergénica con ajuste tridimensional" },
+            { label: "📏 Dimensiones", value: "Calibre 52 mm, Puente nasal 18 mm, Longitud de varilla 145 mm" },
+            { label: "⚖️ Peso Total", value: "22 gramos (ultraligeros para confort continuo sin fatiga craneal)" }
+          ],
+          componentes: [
+            {
+              id: "montura",
+              nombre: "Montura Frontal y Puente Nasal",
+              categoria: "Estructura Principal / Marco",
+              icono: "👓",
+              pos: { x: 0.00, y: 0.32, z: 0.52 },
+              meshCenter: { x: 0.00, y: 0.21, z: 0.52 },
+              queEs: "Armazón frontal que rodea los aros ópticos y los une mediante el puente nasal superior.",
+              paraQueSirve: "Sostiene firmemente los dos cristales oftálmicos en el ángulo y distancia focal óptima frente a los ojos del usuario.",
+              capacidades: [
+                "Fabricada en acetato de celulosa premium con alma interior metálica",
+                "Memoria elástica de forma resistente a torsiones y caídas accidentales",
+                "Ranura interna en bisel en V de 0.6 mm para sujeción micrométrica de cristales",
+                "Acabado hipoalergénico resistente al sudor, calor y agentes cosméticos"
+              ]
+            },
+            {
+              id: "lenteDerecho",
+              nombre: "Cristal / Lente Oftálmico Derecho",
+              categoria: "Óptica de Precisión",
+              icono: "🔍",
+              pos: { x: 0.39, y: 0.18, z: 0.82 },
+              meshCenter: { x: 0.39, y: 0.08, z: 0.82 },
+              queEs: "Lente curvado de policarbonato oftálmico tallado con prescripción óptica para el ojo derecho.",
+              paraQueSirve: "Desvía y enfoca los haces de luz con precisión milimétrica sobre la retina derecha, corrigiendo defectos refractivos como miopía, astigmatismo o presbicia.",
+              capacidades: [
+                "Material policarbonato orgánico de alto índice (1.61 - 1.67)",
+                "Tratamiento antirreflejante multicapa que elimina el 99% de reflejos parásitos",
+                "Filtro UV400 que absorbe el 100% de la radiación ultravioleta dañina",
+                "Capa hidrofóbica y oleofóbica para repeler agua, grasa y huellas",
+                "10 veces más resistente a impactos que el vidrio mineral"
+              ]
+            },
+            {
+              id: "lenteIzquierdo",
+              nombre: "Cristal / Lente Oftálmico Izquierdo",
+              categoria: "Óptica de Precisión",
+              icono: "🔍",
+              pos: { x: -0.39, y: 0.18, z: 0.82 },
+              meshCenter: { x: -0.39, y: 0.08, z: 0.82 },
+              queEs: "Lente óptico asférico tallado a medida con los parámetros dióptricos del ojo izquierdo.",
+              paraQueSirve: "Alinea la trayectoria focal en la fóvea izquierda, garantizando un equilibrio binocular perfecto y una percepción nítida de profundidad y distancias.",
+              capacidades: [
+                "Filtro protector Blue Light Filter contra la fatiga visual digital",
+                "Recubrimiento Hard-Coat 8H resistente a micro-rayones por fricción",
+                "Transmitancia luminosa superior al 99.2% para máxima nitidez",
+                "Diseño asférico que reduce aberraciones y distorsión en los bordes"
+              ]
+            },
+            {
+              id: "patillaDerecha",
+              nombre: "Patilla / Varilla Derecha (Temple)",
+              categoria: "Soporte y Fijación Lateral",
+              icono: "🕶️",
+              pos: { x: 0.87, y: 0.28, z: -0.16 },
+              meshCenter: { x: 0.87, y: 0.19, z: -0.16 },
+              queEs: "Brazo lateral ergonómico que va desde el extremo derecho de la montura hasta apoyarse sobre la oreja.",
+              paraQueSirve: "Sujeta las gafas lateralmente a la cabeza, anclándolas al pabellón auricular y distribuyendo el peso para evitar caídas con el movimiento.",
+              capacidades: [
+                "Varilla interna de acero inoxidable de 0.8 mm para resistencia mecánica",
+                "Terminal curva termoajustable para adaptar el agarre a cualquier anatomía craneal",
+                "Longitud de 145 mm optimizada para distribución equitativa de presión",
+                "Puntas pulidas antideslizantes que no tiran del cabello"
+              ]
+            },
+            {
+              id: "patillaIzquierda",
+              nombre: "Patilla / Varilla Izquierda (Temple)",
+              categoria: "Soporte y Fijación Lateral",
+              icono: "🕶️",
+              pos: { x: -0.87, y: 0.28, z: -0.16 },
+              meshCenter: { x: -0.87, y: 0.19, z: -0.16 },
+              queEs: "Brazo lateral izquierdo fabricado en acetato moldeado con articulación de precisión en la unión con el marco.",
+              paraQueSirve: "Garantiza el balance simétrico del armazón, manteniendo los centros ópticos de ambos lentes paralelos al eje interpupilar.",
+              capacidades: [
+                "Alta flexibilidad elástica sin deformación plástica permanente",
+                "Grabado láser de identificación con número de serie y especificaciones",
+                "Curvatura ergonómica de 45° que previene puntos de dolor en las sienes"
+              ]
+            },
+            {
+              id: "plaquetas",
+              nombre: "Plaquetas Nasales de Silicona y Brazos",
+              categoria: "Apoyo y Confort Nasal",
+              icono: "👃",
+              pos: { x: 0.05, y: -0.14, z: 0.82 },
+              meshCenter: { x: 0.05, y: -0.25, z: 0.82 },
+              queEs: "Par de almohadillas nasales de silicona suave y brazos metálicos articulados fijados al puente interior.",
+              paraQueSirve: "Descansan directamente sobre el hueso de la nariz, soportando el peso frontal de los lentes y evitando que resbalen con el sudor.",
+              capacidades: [
+                "Silicona médica hipoalergénica de tacto sedoso que previene rojeces",
+                "Articulación basculante libre para amoldarse a la inclinación del tabique",
+                "Brazos de titanio maleables para ajustar la separación y altura de las gafas",
+                "Textura micro-acanalada para drenaje de transpiración y adherencia firme"
+              ]
+            },
+            {
+              id: "bisagras",
+              nombre: "Bisagras Flex y Micro-tornillos",
+              categoria: "Mecanismo de Articulación",
+              icono: "🔩",
+              pos: { x: 0.62, y: 0.12, z: 0.48 },
+              meshCenter: { x: 0.62, y: 0.02, z: 0.48 },
+              queEs: "Mecanismo articulado con resortes de compresión de alta precisión y tornillos micrométricos.",
+              paraQueSirve: "Permite plegar las patillas para guardar las gafas y aporta flexibilidad elástica hacia afuera para amortiguar impactos y evitar roturas.",
+              capacidades: [
+                "Muelle elástico integrado que permite apertura adicional de +15° sin forzar la montura",
+                "Tornillos de acero inoxidable M1.2 con fijador anaeróbico antigiro",
+                "Ciclo de vida probado para más de 20,000 aperturas y cierres sin holgura",
+                "Resistencia a la corrosión por niebla salina y sudoración ácida"
+              ]
+            }
+          ]
+        },
+        telefono: {
+          id: "telefono",
+          nombre: "Teléfono",
+          descripcion: "Smartphone: Modelo 3D",
+          tieneDesarmado: true,
+          rutaArmado: "./assets/Modelos/telefono/smartphone.glb",
+          rutaDesarmado: "./assets/Modelos/telefono/smartphone_disassembly.glb",
+          textoDesarmar: "Desarmar teléfono",
+          textoArmar: "Armar teléfono",
+          badgeArmado: "Armado",
+          badgeDesarmado: "Desarmado",
+          iconoSpecs: "📱",
+          tituloSpecs: "Especificaciones del Smartphone",
+          specsGenerales: [
+            { label: "🧠 Procesador (SoC)", value: "Snapdragon 8 Gen 3 (4nm TSMC) — CPU Octa-core hasta 3.3 GHz + GPU Adreno 750" },
+            { label: "⚡ Memoria RAM", value: "12 GB LPDDR5X (ancho de banda hasta 77 GB/s)" },
+            { label: "💾 Almacenamiento", value: "256 GB UFS 4.0 (lectura hasta 4200 MB/s, escritura hasta 2800 MB/s)" },
+            { label: "🖥️ Pantalla", value: "6.7\" AMOLED LTPO 120 Hz (2K, 1–120 Hz adaptativo), 2000 nits pico, Corning Gorilla Glass Victus 2" },
+            { label: "📸 Cámara Principal", value: "50 MP f/1.9 (sensor Sony IMX890, OIS, PDAF omnidireccional)" },
+            { label: "📷 Ultra Gran Angular", value: "13 MP f/2.2, 120° FoV — Teleobjetivo 10 MP 3× zoom óptico" },
+            { label: "🔋 Batería", value: "5000 mAh Si-C de alta densidad, carga rápida 67W (100% en 46 min), inalámbrica 15W" },
+            { label: "📡 Conectividad", value: "5G Sub-6GHz + mmWave, Wi-Fi 7, Bluetooth 5.4, NFC, USB 3.2 Gen 2 (USB-C)" },
+            { label: "🛡️ Protección", value: "IP68 (sumergible a 2 m/30 min), chasis aluminio aeroespacial serie 7000" }
+          ],
+          componentes: [
+            {
+              id: "pantallaModule",
+              nombre: "Pantalla AMOLED y Ensamble Frontal",
+              categoria: "Módulo de Visualización",
+              icono: "🖥️",
+              pos:        { x:  0.178, y:  0.06,  z: -0.052 },
+              meshCenter: { x:  0.178, y: -0.032, z: -0.052 },
+              queEs: "Módulo frontal que integra el panel AMOLED LTPO, el cristal Gorilla Glass Victus 2, el digitalizador táctil y la cámara selfie perforada.",
+              paraQueSirve: "Muestra la interfaz de usuario con colores profundos y contraste infinito (negros absolutos AMOLED) y registra cada toque y gesto del dedo con latencia menor a 2 ms.",
+              capacidades: [
+                "Panel AMOLED 6.7 pulgadas QHD+ 2K — resolución 3200 × 1440 px (526 PPI)",
+                "Tasa de refresco LTPO adaptativa de 1 a 120 Hz — ahorro de batería inteligente",
+                "Brillo pico de 2000 nits en exterior (HDR10+ certificado)",
+                "Protección Corning Gorilla Glass Victus 2 resistente a arañazos de dureza 9H",
+                "Cámara frontal 12 MP f/2.4 con autofoco para videollamadas 4K"
+              ]
+            },
+            {
+              id: "placaBase",
+              nombre: "Placa Base (Motherboard / PCB)",
+              categoria: "Circuito Integrado Principal",
+              icono: "🔌",
+              pos:        { x: -0.767, y:  0.09,  z:  0.010 },
+              meshCenter: { x: -0.767, y:  0.044, z:  0.010 },
+              queEs: "Placa multicapa de alta densidad con el SoC Snapdragon soldado (proceso BGA), módulos de RF 5G/Wi-Fi 7, controladores de carga y circuitos de gestión de energía (PMIC).",
+              paraQueSirve: "Es el cerebro y sistema nervioso del teléfono: ejecuta el sistema operativo, coordina todos los periféricos y gestiona de forma dinámica el consumo de energía.",
+              capacidades: [
+                "SoC Snapdragon 8 Gen 3 en 4nm — CPU Cortex-X4 3.3 GHz + GPU Adreno 750",
+                "Módem 5G integrado X75 (hasta 10 Gbps descarga en mmWave)",
+                "Motor de IA Hexagon 798 con 45 TOPS para fotografía computacional en tiempo real",
+                "PMIC de 6 fases con regulación dinámica de voltaje para máxima eficiencia energética"
+              ]
+            },
+            {
+              id: "bateria",
+              nombre: "Batería de Alta Densidad (Si-C Li-Po)",
+              categoria: "Alimentación Eléctrica",
+              icono: "🔋",
+              pos:        { x: -0.313, y:  0.02,  z:  0.045 },
+              meshCenter: { x: -0.313, y: -0.027, z:  0.045 },
+              queEs: "Celda recargable de polímero de litio con ánodo de carburo de silicio (Si-C) de próxima generación, integrada con un BMS (Battery Management System) inteligente.",
+              paraQueSirve: "Suministra energía eléctrica estabilizada a todos los circuitos del teléfono, recarga por cable y de forma inalámbrica, y protege contra sobrecalentamiento y sobredescarga.",
+              capacidades: [
+                "Capacidad de 5000 mAh con tecnología Si-C (15% más densa que el Li-Po convencional)",
+                "Carga rápida por cable de 67W: 0 a 100% en aproximadamente 46 minutos",
+                "Carga inalámbrica Qi2 de 15W sin cables",
+                "Autonomía estimada de 24 a 32 horas de uso mixto con pantalla LTPO",
+                "Certificación TÜV Rheinland: más de 1000 ciclos de carga sin degradación perceptible"
+              ]
+            },
+            {
+              id: "camaraP",
+              nombre: "Módulo de Cámara Principal (Triple)",
+              categoria: "Sistema Fotográfico Trasero",
+              icono: "📸",
+              pos:        { x:  0.771, y: -0.00,  z: -0.179 },
+              meshCenter: { x:  0.771, y: -0.044, z: -0.179 },
+              queEs: "Isla de cámara trasera con tres sensores ópticos independientes: principal gran angular, ultra gran angular y teleobjetivo periscópico, con módulo LiDAR y flash LED dual.",
+              paraQueSirve: "Captura fotografías y video con calidad profesional en cualquier condición de luz usando OIS, PDAF omnidireccional y procesamiento de imagen por IA en tiempo real.",
+              capacidades: [
+                "Principal: 50 MP Sony IMX890 f/1.9 — OIS (estabilización óptica), apertura variable",
+                "Ultra gran angular: 13 MP f/2.2 con campo visual de 120° y corrección de distorsión por IA",
+                "Teleobjetivo: 10 MP 3× zoom óptico con zoom espacial hasta 30× digital",
+                "Video 8K a 24 fps / 4K HDR a 60 fps con estabilización cinemática",
+                "LiDAR de segunda generación para enfoque en 0 ms en la oscuridad total"
+              ]
+            },
+            {
+              id: "altavozUpper",
+              nombre: "Altavoz Superior y Auricular",
+              categoria: "Audio y Comunicación",
+              icono: "🔊",
+              pos:        { x:  0.622, y: -0.00,  z:  0.283 },
+              meshCenter: { x:  0.622, y: -0.049, z:  0.283 },
+              queEs: "Cámara acústica sellada con auricular de titanio que actúa como canal de audio en llamadas y como altavoz estéreo superior en el sistema de sonido del teléfono.",
+              paraQueSirve: "Reproduce el audio del interlocutor durante llamadas, genera el canal agudo del estéreo virtual en modo multimedia y se utiliza para alertas de alta frecuencia.",
+              capacidades: [
+                "Membrana de titanio de 0.08 mm para respuesta en frecuencias de 2 kHz a 20 kHz",
+                "Altavoz estéreo con sistema Dolby Atmos y DTS:X Ultra certificados",
+                "Separación de canales de 48 dB para escena sonora envolvente",
+                "Micrófono superior con cancelación adaptativa de ruido ambiental"
+              ]
+            },
+            {
+              id: "altavozLower",
+              nombre: "Altavoz Inferior y Puerto USB-C",
+              categoria: "Conectividad y Audio",
+              icono: "🔌",
+              pos:        { x:  0.675, y: -0.01,  z:  0.664 },
+              meshCenter: { x:  0.675, y: -0.059, z:  0.664 },
+              queEs: "Módulo inferior que integra el altavoz principal de graves, el puerto USB-C 3.2 Gen 2 y los micrófonos de audio y cancelación de ruido.",
+              paraQueSirve: "Emite el canal de graves del audio estéreo, transfiere datos y video a alta velocidad (20 Gbps) y recibe la corriente de carga rápida de 67W.",
+              capacidades: [
+                "Puerto USB 3.2 Gen 2 — transferencia de datos hasta 20 Gbps y salida DisplayPort 1.4 (4K@60Hz)",
+                "Altavoz de 1.5 cc de volumen de cámara con amplificador de clase D de 24 dB de SNR",
+                "Micrófono omnidireccional con array dual para grabación de voz estéreo",
+                "Certificación USB Power Delivery 3.1 (hasta 100W de carga de entrada)"
+              ]
+            },
+            {
+              id: "camaraSelfie",
+              nombre: "Cámara Frontal Perforada y Sensores",
+              categoria: "Sensor de Imagen y Biometría",
+              icono: "🤳",
+              pos:        { x:  0.645, y: -0.00,  z: -0.587 },
+              meshCenter: { x:  0.645, y: -0.041, z: -0.587 },
+              queEs: "Módulo de cámara delantera alojado en la perforación del panel AMOLED, integrado con los sensores de luz ambiental, proximidad y el sistema de desbloqueo facial 3D.",
+              paraQueSirve: "Captura selfies y videollamadas en alta resolución, gestiona el brillo automático de la pantalla y autentica de forma segura la identidad del usuario mediante mapeo facial 3D.",
+              capacidades: [
+                "Sensor de imagen de 12 MP f/2.4 con autofoco por detección de fase",
+                "Grabación de video selfie en 4K a 60 fps con estabilización EIS",
+                "Sensor de luz espectral que detecta temperatura de color para balance de blancos perfecto",
+                "Sistema de reconocimiento facial 3D con proyector infrarrojo — desbloqueo en 0.3 segundos"
+              ]
+            },
+            {
+              id: "botonPower",
+              nombre: "Botón de Encendido y Lector de Huella",
+              categoria: "Control Físico y Biometría",
+              icono: "🔐",
+              pos:        { x:  0.937, y: -0.01,  z: -0.556 },
+              meshCenter: { x:  0.937, y: -0.052, z: -0.556 },
+              queEs: "Botón lateral multifunción que integra el sensor de huella dactilar capacitivo lateral de ultra alta precisión con el mecanismo de encendido/apagado físico.",
+              paraQueSirve: "Enciende y apaga la pantalla, inicia el modo de apagado y autentica al usuario de forma segura en menos de 0.25 segundos mediante la lectura de las crestas papilares.",
+              capacidades: [
+                "Sensor capacitivo de huella de 508 DPI con área activa de 8 × 8 mm",
+                "Tiempo de autenticación de 0.25 segundos (certificación FRR < 0.002%)",
+                "Área de contacto táctil con retroalimentación háptica del motor lineal eje-X",
+                "Compatible con hasta 10 huellas registradas de forma simultánea"
+              ]
+            },
+            {
+              id: "botonesVolumen",
+              nombre: "Botones de Volumen y Perfil de Audio",
+              categoria: "Control Físico",
+              icono: "🎵",
+              pos:        { x:  0.927, y: -0.01,  z:  0.331 },
+              meshCenter: { x:  0.927, y: -0.067, z:  0.331 },
+              queEs: "Par de botones laterales de aluminio anodizado para incrementar y reducir el volumen del sistema, con modo de captura de pantalla y disparo de cámara al mantenerlos pulsados.",
+              paraQueSirve: "Controlan el nivel de audio de llamadas, multimedia y alarmas; activan capturas de pantalla rápidas y sirven de disparador físico de la cámara para fotografías estabilizadas.",
+              capacidades: [
+                "Recorrido de pulsación de 0.4 mm con clic táctil de 240 gf de fuerza de actuación",
+                "Aleación de aluminio 7000 anodizado para resistencia a corrosión y micro-rayones",
+                "Función dual: volumen + disparo de cámara hardware (bloquea OIS para foto sin vibración)",
+                "Vida útil certificada superior a 500,000 pulsaciones"
+              ]
+            }
+          ]
+        }
+      };
+
+      // ==========================================
+      // Configuración de la Escena Three.js
+      // ==========================================
       const escena = new THREE.Scene();
-      escena.background = new THREE.Color(0x101827);
+      escena.background = new THREE.Color(0x0b0f19);
 
-      // near reducido a 0.001 para evitar el recorte/estiramiento al acercar
       const camara = new THREE.PerspectiveCamera(
         45,
         window.innerWidth / window.innerHeight,
@@ -85,127 +1092,482 @@
       renderizador.setSize(window.innerWidth, window.innerHeight);
       renderizador.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderizador.outputColorSpace = THREE.SRGBColorSpace;
-      // Tone mapping necesario para que los materiales PBR del GLB muestren texturas correctamente
       renderizador.toneMapping = THREE.ACESFilmicToneMapping;
-      renderizador.toneMappingExposure = 1.0;
+      renderizador.toneMappingExposure = 1.05;
       document.body.appendChild(renderizador.domElement);
 
       const controles = new OrbitControls(camara, renderizador.domElement);
       controles.enableDamping = true;
+      controles.dampingFactor = 0.05;
 
-      escena.add(new THREE.HemisphereLight(0xffffff, 0x444455, 2));
+      // Iluminación
+      const luzHemisferica = new THREE.HemisphereLight(0xffffff, 0x334155, 2.2);
+      escena.add(luzHemisferica);
 
-      const luz = new THREE.DirectionalLight(0xffffff, 2);
-      luz.position.set(5, 8, 5);
-      escena.add(luz);
+      const luzFrontal = new THREE.DirectionalLight(0xffffff, 2.0);
+      luzFrontal.position.set(5, 8, 5);
+      escena.add(luzFrontal);
 
-      // Segunda luz para iluminar el lado contrario y evitar zonas muy oscuras
-      const luzTrasera = new THREE.DirectionalLight(0xffffff, 0.6);
-      luzTrasera.position.set(-5, 3, -5);
+      const luzTrasera = new THREE.DirectionalLight(0x93c5fd, 1.2);
+      luzTrasera.position.set(-5, 4, -5);
       escena.add(luzTrasera);
 
-      const rejilla = new THREE.GridHelper(10, 10, 0x475569, 0x263449);
+      const rejilla = new THREE.GridHelper(10, 10, 0x334155, 0x1e293b);
       escena.add(rejilla);
 
-      let laptop;
+      // Grupo para los marcadores 3D interactivos
+      const grupoMarcadores = new THREE.Group();
+      escena.add(grupoMarcadores);
+
+      // ==========================================
+      // Cargadores GLTF y Draco
+      // ==========================================
+      const cargador = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath("./assets/draco/");
+      cargador.setDRACOLoader(dracoLoader);
+
+      let modeloActual = null;
+      let estadoDesarmado = false; // false = armado, true = desarmado
 
       const parametros = new URLSearchParams(window.location.search);
       const modeloSolicitado = parametros.get("modelo") || "computador";
 
-      const nombres = {
-        computador: "Laptop",
-        telefono: "Teléfono",
-        lentes: "Lentes",
-      };
-      const nombreActual = nombres[modeloSolicitado] || modeloSolicitado;
-      document.title = `Reconocimiento3D - ${nombreActual}`;
-      const descElem = document.getElementById("descripcion-modelo");
-      if (descElem) {
-        descElem.textContent = `${nombreActual}: modelo 3D`;
+      // Obtener configuración activa
+      const configActual = CONFIG_MODELOS[modeloSolicitado] || CONFIG_MODELOS.computador;
+
+      document.title = `Reconocimiento3D - ${configActual.nombre}`;
+      document.getElementById("descripcion-modelo").textContent = configActual.descripcion;
+
+      const btnDesarmar = document.getElementById("btn-desarmar");
+      const btnDesarmarTexto = document.getElementById("btn-desarmar-texto");
+      const badgeEstado = document.getElementById("badge-estado");
+      const panelSpecs = document.getElementById("panel-especificaciones");
+      const modalComp = document.getElementById("modal-componente");
+      const barraComponentes = document.getElementById("barra-componentes");
+      const pildoraAyuda = document.getElementById("pildora-ayuda");
+
+      // Inicializar interfaz según si el modelo admite modo desarmado
+      if (configActual.tieneDesarmado) {
+        btnDesarmar.style.display = "inline-flex";
+        btnDesarmarTexto.textContent = configActual.textoDesarmar;
+        badgeEstado.textContent = configActual.badgeArmado;
+        badgeEstado.className = "badge badge-armado";
+
+        poblarSpecsGenerales();
+        poblarBarraComponentes();
+        panelSpecs.classList.remove("oculto");
+      } else {
+        btnDesarmar.style.display = "none";
+        document.getElementById("btn-toggle-specs").style.display = "none";
+        panelSpecs.classList.add("oculto");
       }
 
-      const modelos = {
-        computador: "./assets/Modelos/computador/laptop.glb",
-        telefono: "./assets/Modelos/telefono/smartphone.glb",
-        lentes: "./assets/Modelos/lentes/glasses.glb",
-      };
+      // ==========================================
+      // Poblar panel de especificaciones generales
+      // ==========================================
+      function poblarSpecsGenerales() {
+        const grid = document.getElementById("specs-grid");
+        const titulo = document.getElementById("specs-titulo");
+        const icono = document.getElementById("specs-icono");
 
-      const rutaModelo = modelos[modeloSolicitado] || modelos.computador;
+        if (titulo && icono) {
+          titulo.textContent = configActual.tituloSpecs;
+          icono.textContent = configActual.iconoSpecs;
+        }
 
-      const cargador = new GLTFLoader();
+        grid.innerHTML = "";
+        configActual.specsGenerales.forEach((s) => {
+          const item = document.createElement("div");
+          item.className = "spec-item";
+          item.innerHTML = `
+            <div class="spec-label">${s.label}</div>
+            <div class="spec-value">${s.value}</div>
+          `;
+          grid.appendChild(item);
+        });
+      }
 
-      cargador.load(
-        rutaModelo,
-        (gltf) => {
-          laptop = gltf.scene;
+      // ==========================================
+      // Función para cargar un modelo 3D
+      // ==========================================
+      function cargarModelo(ruta, esDesarmado = false) {
+        document.getElementById("estado").innerHTML = esDesarmado
+          ? `<span>⏳</span> Cargando vista desarmada...`
+          : `<span>⏳</span> Cargando modelo 3D...`;
 
-          // Calcular dimensiones originales
-          const caja = new THREE.Box3().setFromObject(laptop);
-          const centro = caja.getCenter(new THREE.Vector3());
-          const tamano = caja.getSize(new THREE.Vector3());
-          const mayor = Math.max(tamano.x, tamano.y, tamano.z);
+        cargador.load(
+          ruta,
+          (gltf) => {
+            if (modeloActual) {
+              escena.remove(modeloActual);
+            }
+            limpiarMarcadores();
 
-          // Normalizar escala: el modelo queda con tamaño máximo = 2 unidades,
-          // independientemente de si el GLB viene en mm, cm o m
-          if (mayor > 0) {
-            const factorEscala = 2 / mayor;
-            laptop.scale.setScalar(factorEscala);
+            modeloActual = gltf.scene;
+
+            // Calcular y normalizar escala
+            const caja = new THREE.Box3().setFromObject(modeloActual);
+            const centro = caja.getCenter(new THREE.Vector3());
+            const tamano = caja.getSize(new THREE.Vector3());
+            const mayor = Math.max(tamano.x, tamano.y, tamano.z);
+
+            if (mayor > 0) {
+              const factorEscala = 2 / mayor;
+              modeloActual.scale.setScalar(factorEscala);
+            }
+
+            modeloActual.position.sub(centro.multiplyScalar(modeloActual.scale.x));
+            escena.add(modeloActual);
+
+            // Ajustar cámara para encuadrar perfectamente
+            const cajaFinal = new THREE.Box3().setFromObject(modeloActual);
+            const tamanoFinal = cajaFinal.getSize(new THREE.Vector3());
+            const mayorFinal = Math.max(tamanoFinal.x, tamanoFinal.y, tamanoFinal.z);
+            const distancia = Math.max(mayorFinal * 1.85, 2.5);
+
+            camara.position.set(distancia * 1.1, distancia * 0.7, distancia * 1.1);
+            controles.target.set(0, 0, 0);
+            controles.update();
+
+            document.getElementById("estado").innerHTML =
+              `<span>✅</span> Modelo cargado correctamente`;
+
+            if (esDesarmado) {
+              crearMarcadores3D();
+              pildoraAyuda.classList.remove("oculto");
+              barraComponentes.classList.remove("oculto");
+            } else {
+              pildoraAyuda.classList.add("oculto");
+              barraComponentes.classList.add("oculto");
+              cerrarModalComponente();
+            }
+          },
+          (progreso) => {
+            if (progreso.total > 0) {
+              const pct = Math.round((progreso.loaded / progreso.total) * 100);
+              document.getElementById("estado").innerHTML =
+                `<span>⏳</span> Descargando: ${pct}%`;
+            }
+          },
+          (error) => {
+            console.error("Error al cargar modelo:", error);
+            if (esDesarmado && dracoLoader) {
+              console.warn("Reintentando con decodificador Draco desde CDN...");
+              dracoLoader.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/libs/draco/");
+              cargador.load(ruta, () => {
+                cargarModelo(ruta, esDesarmado);
+              });
+            } else {
+              document.getElementById("estado").innerHTML =
+                `<span>❌</span> No se pudo cargar el archivo.`;
+            }
           }
+        );
+      }
 
-          // Centrar modelo tras el escalado
-          laptop.position.sub(centro.multiplyScalar(laptop.scale.x));
+      // Cargar modelo inicial armado
+      cargarModelo(configActual.rutaArmado, false);
 
-          escena.add(laptop);
+      // ==========================================
+      // Alternar Armar / Desarmar Modelo
+      // ==========================================
+      btnDesarmar.addEventListener("click", () => {
+        estadoDesarmado = !estadoDesarmado;
 
-          // Recalcular caja tras normalizar
-          const cajaFinal = new THREE.Box3().setFromObject(laptop);
-          const tamanoFinal = cajaFinal.getSize(new THREE.Vector3());
-          const mayorFinal = Math.max(tamanoFinal.x, tamanoFinal.y, tamanoFinal.z);
+        if (estadoDesarmado) {
+          // Cambiar a modelo desarmado
+          btnDesarmarTexto.textContent = configActual.textoArmar;
+          btnDesarmar.querySelector("span:first-child").textContent = "📦";
+          btnDesarmar.className = "btn-primary";
+          badgeEstado.textContent = configActual.badgeDesarmado;
+          badgeEstado.className = "badge badge-desarmado";
+          panelSpecs.classList.add("oculto");
 
-          const distancia = Math.max(mayorFinal * 1.8, 2);
-          camara.position.set(distancia, distancia * 0.65, distancia);
-          controles.target.set(0, 0, 0);
-          controles.update();
+          cargarModelo(configActual.rutaDesarmado, true);
+        } else {
+          // Volver a modelo armado
+          btnDesarmarTexto.textContent = configActual.textoDesarmar;
+          btnDesarmar.querySelector("span:first-child").textContent = "🔧";
+          btnDesarmar.className = "btn-warning";
+          badgeEstado.textContent = configActual.badgeArmado;
+          badgeEstado.className = "badge badge-armado";
+          panelSpecs.classList.remove("oculto");
 
-          document.getElementById("estado").textContent =
-            "Modelo cargado correctamente";
-        },
-        undefined,
-        (error) => {
-          console.error(error);
-          document.getElementById("estado").textContent =
-            "No se pudo cargar. Comprueba la ruta del archivo.";
-        },
-      );
+          cargarModelo(configActual.rutaArmado, false);
+        }
+      });
 
+      // Centrar modelo
       document.getElementById("centrar").addEventListener("click", () => {
-        if (!laptop) return;
-
-        const caja = new THREE.Box3().setFromObject(laptop);
+        if (!modeloActual) return;
+        const caja = new THREE.Box3().setFromObject(modeloActual);
         const tamano = caja.getSize(new THREE.Vector3());
         const mayor = Math.max(tamano.x, tamano.y, tamano.z);
-        const distancia = Math.max(mayor * 1.8, 2);
+        const distancia = Math.max(mayor * 1.85, 2.5);
 
-        camara.position.set(distancia, distancia * 0.65, distancia);
+        camara.position.set(distancia * 1.1, distancia * 0.7, distancia * 1.1);
         controles.target.set(0, 0, 0);
         controles.update();
       });
 
+      // Toggle especificaciones generales
+      document.getElementById("btn-toggle-specs").addEventListener("click", () => {
+        panelSpecs.classList.toggle("oculto");
+      });
+      document.getElementById("cerrar-specs").addEventListener("click", () => {
+        panelSpecs.classList.add("oculto");
+      });
+
+      // Cerrar modal de componente individual
+      document.getElementById("cerrar-modal-comp").addEventListener("click", () => {
+        cerrarModalComponente();
+      });
+
+      function cerrarModalComponente() {
+        modalComp.classList.remove("activo");
+        document.querySelectorAll(".chip-componente").forEach(c => c.classList.remove("seleccionado"));
+      }
+
+      // ==========================================
+      // Marcadores 3D flotantes interactivos (Sprites)
+      // ==========================================
+      function crearTexturaMarcador(icono, numero) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+
+        // Círculo exterior brillante con gradiente
+        const grad = ctx.createRadialGradient(64, 64, 20, 64, 64, 60);
+        grad.addColorStop(0, "rgba(59, 130, 246, 0.95)");
+        grad.addColorStop(0.7, "rgba(37, 99, 235, 0.7)");
+        grad.addColorStop(1, "rgba(14, 165, 233, 0.0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(64, 64, 60, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Círculo interior sólido
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(64, 64, 38, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Icono / Emoji en el centro
+        ctx.font = "38px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(icono, 64, 66);
+
+        const textura = new THREE.CanvasTexture(canvas);
+        return textura;
+      }
+
+      function crearMarcadores3D() {
+        limpiarMarcadores();
+
+        configActual.componentes.forEach((comp, idx) => {
+          const textura = crearTexturaMarcador(comp.icono, idx + 1);
+          const material = new THREE.SpriteMaterial({
+            map: textura,
+            transparent: true,
+            depthTest: false,
+          });
+
+          const sprite = new THREE.Sprite(material);
+          sprite.position.set(comp.pos.x, comp.pos.y, comp.pos.z);
+          sprite.scale.set(0.18, 0.18, 1);
+          sprite.userData = { componentId: comp.id };
+
+          grupoMarcadores.add(sprite);
+        });
+      }
+
+      function limpiarMarcadores() {
+        while (grupoMarcadores.children.length > 0) {
+          const obj = grupoMarcadores.children[0];
+          if (obj.material && obj.material.map) {
+            obj.material.map.dispose();
+            obj.material.dispose();
+          }
+          grupoMarcadores.remove(obj);
+        }
+      }
+
+      // ==========================================
+      // Barra Inferior de Chips Rápidos
+      // ==========================================
+      function poblarBarraComponentes() {
+        barraComponentes.innerHTML = "";
+        configActual.componentes.forEach((comp) => {
+          const chip = document.createElement("button");
+          chip.className = "chip-componente";
+          chip.id = `chip-${comp.id}`;
+          chip.innerHTML = `<span>${comp.icono}</span> ${comp.nombre.split(" (")[0]}`;
+          chip.addEventListener("click", () => {
+            seleccionarComponente(comp.id);
+          });
+          barraComponentes.appendChild(chip);
+        });
+      }
+
+      // ==========================================
+      // Seleccionar e inspeccionar un componente
+      // ==========================================
+      function seleccionarComponente(id) {
+        const comp = configActual.componentes.find((c) => c.id === id);
+        if (!comp) return;
+
+        // Actualizar datos del modal
+        document.getElementById("comp-icono").textContent = comp.icono;
+        document.getElementById("comp-categoria").textContent = comp.categoria;
+        document.getElementById("comp-nombre").textContent = comp.nombre;
+        document.getElementById("comp-que-es").textContent = comp.queEs;
+        document.getElementById("comp-para-que-sirve").textContent = comp.paraQueSirve;
+
+        const listaCap = document.getElementById("comp-capacidades");
+        listaCap.innerHTML = "";
+        comp.capacidades.forEach((cap) => {
+          const li = document.createElement("li");
+          li.textContent = cap;
+          listaCap.appendChild(li);
+        });
+
+        // Mostrar modal
+        modalComp.classList.add("activo");
+
+        // Actualizar chips seleccionados
+        document.querySelectorAll(".chip-componente").forEach((c) => {
+          c.classList.remove("seleccionado");
+        });
+        const chipActivo = document.getElementById(`chip-${id}`);
+        if (chipActivo) {
+          chipActivo.classList.add("seleccionado");
+          chipActivo.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+
+        // Enfocar cámara hacia la pieza seleccionada suavemente
+        animarEnfoque(comp.pos);
+      }
+
+      function animarEnfoque(targetPos) {
+        const objetivoFinal = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
+        const posInicial = controles.target.clone();
+        let progreso = 0;
+
+        function pasoAnimacion() {
+          progreso += 0.08;
+          if (progreso < 1) {
+            controles.target.lerpVectors(posInicial, objetivoFinal, progreso);
+            controles.update();
+            requestAnimationFrame(pasoAnimacion);
+          } else {
+            controles.target.copy(objetivoFinal);
+            controles.update();
+          }
+        }
+        pasoAnimacion();
+      }
+
+      // ==========================================
+      // Detección de clics en piezas con Raycasting
+      // ==========================================
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      window.addEventListener("pointerdown", (event) => {
+        // Ignorar si el clic fue en un panel UI o botón
+        if (
+          event.target.closest("#panel") ||
+          event.target.closest("#panel-especificaciones") ||
+          event.target.closest("#modal-componente") ||
+          event.target.closest("#barra-componentes")
+        ) {
+          return;
+        }
+
+        if (!estadoDesarmado || !modeloActual) return;
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camara);
+
+        // 1. Probar primero si hizo clic en un marcador flotante
+        const hitsMarcadores = raycaster.intersectObjects(grupoMarcadores.children, false);
+        if (hitsMarcadores.length > 0) {
+          const hit = hitsMarcadores[0];
+          if (hit.object.userData && hit.object.userData.componentId) {
+            seleccionarComponente(hit.object.userData.componentId);
+            return;
+          }
+        }
+
+        // 2. Probar si hizo clic en la geometría del modelo desarmado
+        const hitsModelo = raycaster.intersectObject(modeloActual, true);
+        if (hitsModelo.length > 0) {
+          const puntoImpacto = hitsModelo[0].point;
+          const compCercano = encontrarComponenteMasCercano(puntoImpacto);
+          if (compCercano) {
+            seleccionarComponente(compCercano.id);
+          }
+        }
+      });
+
+      function encontrarComponenteMasCercano(punto) {
+        let mejorComponente = null;
+        let menorDistancia = Infinity;
+
+        configActual.componentes.forEach((comp) => {
+          const target = comp.meshCenter || comp.pos;
+          // Ponderamos el eje Y porque las piezas suelen estar separadas verticalmente
+          const dx = punto.x - target.x;
+          const dy = (punto.y - target.y) * 1.5;
+          const dz = punto.z - target.z;
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          if (dist < menorDistancia) {
+            menorDistancia = dist;
+            mejorComponente = comp;
+          }
+        });
+
+        return mejorComponente;
+      }
+
+      // Redimensionado de ventana
       window.addEventListener("resize", () => {
         camara.aspect = window.innerWidth / window.innerHeight;
         camara.updateProjectionMatrix();
         renderizador.setSize(window.innerWidth, window.innerHeight);
       });
 
+      // Bucle de renderizado
+      let reloj = new THREE.Clock();
       function animar() {
         requestAnimationFrame(animar);
+        const delta = reloj.getElapsedTime();
+
+        // Animación suave de flotación de los marcadores
+        grupoMarcadores.children.forEach((sprite, i) => {
+          const comp = configActual.componentes[i];
+          if (comp) {
+            sprite.position.y = comp.pos.y + Math.sin(delta * 2.5 + i) * 0.015;
+          }
+        });
+
         controles.update();
         renderizador.render(escena, camara);
       }
 
       animar();
 
-      // Avisar a Java cuando el tab se cierre para permitir una nueva detección
+      // Notificar a Java cuando la pestaña se cierra
       window.addEventListener("beforeunload", () => {
         navigator.sendBeacon("http://localhost:8001/cerrar");
       });

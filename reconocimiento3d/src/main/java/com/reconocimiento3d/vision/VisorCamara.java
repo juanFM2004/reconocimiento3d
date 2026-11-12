@@ -5,6 +5,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -23,8 +24,11 @@ public class VisorCamara {
 
         System.out.println("OpenCV cargado correctamente");
 
-        // Abrir cámara
-        VideoCapture camara = new VideoCapture(0);
+        // Abrir cámara (DirectShow prioritario en Windows para evitar errores MSMF)
+        VideoCapture camara = new VideoCapture(0, Videoio.CAP_DSHOW);
+        if (!camara.isOpened()) {
+            camara = new VideoCapture(0);
+        }
 
         if (!camara.isOpened()) {
             System.out.println("No se pudo abrir la cámara");
@@ -64,10 +68,11 @@ public class VisorCamara {
                     );
 
                     if (imagenJava != null) {
-
+                        int ancho = pantalla.getWidth() > 0 ? pantalla.getWidth() : 800;
+                        int alto = pantalla.getHeight() > 0 ? pantalla.getHeight() : 600;
                         Image imagenEscalada = imagenJava.getScaledInstance(
-                            pantalla.getWidth(),
-                            pantalla.getHeight(),
+                            ancho,
+                            alto,
                             Image.SCALE_FAST
                         );
 

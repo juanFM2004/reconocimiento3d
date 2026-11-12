@@ -3,6 +3,7 @@ package com.reconocimiento3d.vision;
 import nu.pattern.OpenCV;
 import org.opencv.core.Mat;
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 
 public class Camara {
 
@@ -13,8 +14,8 @@ public class Camara {
 
         System.out.println("OpenCV cargado correctamente");
 
-        // Abrir la cámara predeterminada
-        VideoCapture camara = new VideoCapture(0);
+        // Abrir la cámara predeterminada con DirectShow
+        VideoCapture camara = new VideoCapture(0, Videoio.CAP_DSHOW);
 
         if (!camara.isOpened()) {
             System.out.println("No se pudo abrir la cámara");

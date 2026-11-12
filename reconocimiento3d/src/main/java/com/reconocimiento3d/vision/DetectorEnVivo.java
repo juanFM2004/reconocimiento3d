@@ -10,6 +10,7 @@ import nu.pattern.OpenCV;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 
 import com.reconocimiento3d.vision.DetectorEnVivo.Deteccion;
 
@@ -158,16 +159,16 @@ public class DetectorEnVivo {
                 System.out.println("Aviso: No se encontró el modelo de lentes en " + rutaLentes);
             }
 
-            // 3. Abrir cámara
+            // 3. Abrir cámara con detección inteligente de backend (DirectShow prioritario en Windows)
+            camara = abrirCamaraRobusta();
 
-            camara = new VideoCapture(0);
-
-            if (!camara.isOpened()) {
-
-                System.out.println("No se pudo abrir la cámara");
-
+            if (camara == null || !camara.isOpened()) {
+                System.out.println("❌ ERROR: No se pudo abrir ninguna cámara de video.");
+                System.out.println("Posibles causas:");
+                System.out.println(" 1. Otra aplicación (Zoom, Teams, Meet, Chrome, app Cámara de Windows) está usando la cámara.");
+                System.out.println(" 2. Permisos de Windows: Revisa 'Configuración > Privacidad y seguridad > Cámara' y permite el acceso a aplicaciones de escritorio.");
+                System.out.println(" 3. La cámara está desconectada o deshabilitada.");
                 return;
-
             }
 
             System.out.println("Cámara abierta correctamente");
@@ -597,19 +598,14 @@ public class DetectorEnVivo {
                         );
 
                         if (imagenJava != null) {
-
+                            int anchoV = pantalla.getWidth() > 0 ? pantalla.getWidth() : 1000;
+                            int altoV = pantalla.getHeight() > 0 ? pantalla.getHeight() : 750;
                             Image escalada = imagenJava.getScaledInstance(
-
-                                    pantalla.getWidth(),
-
-                                    pantalla.getHeight(),
-
+                                    anchoV,
+                                    altoV,
                                     Image.SCALE_FAST
-
                             );
-
                             pantalla.setIcon(new ImageIcon(escalada));
-
                         }
 
                     }
@@ -744,6 +740,94 @@ public class DetectorEnVivo {
             default:
                 return null;
         }
+    }
+
+    private static VideoCapture abrirCamaraRobusta() {
+        // En Windows, OpenCV con el backend por defecto MSMF falla frecuentemente con:
+        // "CvCapture_MSMF::grabFrame videoio(MSMF): can't grab frame. Error: -2147483638"
+        // DirectShow (CAP_DSHOW) es el backend nativo más estable y rápido para cámaras en Windows.
+        int[] backends = { Videoio.CAP_DSHOW, Videoio.CAP_ANY, Videoio.CAP_MSMF };
+        int[] indices = { 0, 1, 2 };
+
+        VideoCapture mejorCamara = null;
+        double mejorBrillo = -1;
+        String mejorDetalle = "";
+
+        System.out.println("Buscando dispositivos de cámara disponibles...");
+
+        for (int backend : backends) {
+            String nombreBackend = (backend == Videoio.CAP_DSHOW) ? "DirectShow"
+                    : (backend == Videoio.CAP_MSMF ? "MSMF" : "Auto");
+            for (int idx : indices) {
+                try {
+                    VideoCapture cap = new VideoCapture(idx, backend);
+                    if (cap.isOpened()) {
+                        Mat prueba = new Mat();
+                        boolean grabExitoso = false;
+                        double brillo = 0;
+                        for (int i = 0; i < 6; i++) {
+                            if (cap.read(prueba) && !prueba.empty() && prueba.width() > 0) {
+                                grabExitoso = true;
+                                Scalar media = Core.mean(prueba);
+                                brillo = (media.val[0] + media.val[1] + media.val[2]) / 3.0;
+                                if (brillo > 5.0) {
+                                    break;
+                                }
+                            }
+                            try {
+                                Thread.sleep(60);
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+                        if (grabExitoso) {
+                            String detalle = "[" + nombreBackend + "] en índice " + idx + " (brillo promedio: " + String.format(Locale.US, "%.1f", brillo) + ")";
+                            System.out.println("  • Dispositivo detectado: " + detalle);
+
+                            // Si encontramos una cámara con imagen real y con luz (brillo > 5), la priorizamos
+                            if (brillo > 5.0) {
+                                if (mejorCamara != null) {
+                                    mejorCamara.release();
+                                }
+                                System.out.println("-> Cámara seleccionada con señal activa: " + detalle);
+                                return cap;
+                            }
+
+                            // Si es la primera que abre o tiene algo más de señal, la guardamos de reserva
+                            if (mejorCamara == null || brillo > mejorBrillo) {
+                                if (mejorCamara != null) {
+                                    mejorCamara.release();
+                                }
+                                mejorCamara = cap;
+                                mejorBrillo = brillo;
+                                mejorDetalle = detalle;
+                            } else {
+                                cap.release();
+                            }
+                        } else {
+                            cap.release();
+                        }
+                    }
+                } catch (Exception e) {
+                    // Probar siguiente configuración
+                }
+            }
+            if (mejorCamara != null && mejorBrillo > 5.0) {
+                break;
+            }
+        }
+
+        if (mejorCamara != null) {
+            System.out.println("-> Cámara seleccionada: " + mejorDetalle);
+            if (mejorBrillo < 1.0) {
+                System.out.println("⚠️ ATENCIÓN: La cámara conectada está enviando una imagen 100% negra.");
+                System.out.println("   Posibles motivos:");
+                System.out.println("   1. La tapa/obturador físico de privacidad de la webcam está cerrado.");
+                System.out.println("   2. Hay una tecla de función o interruptor físico (Fn+F6, Fn+F10, etc.) apagando el sensor.");
+                System.out.println("   3. Es una cámara virtual (OBS/IR) sin transmisión activa.");
+            }
+            return mejorCamara;
+        }
+        return null;
     }
 
 }
